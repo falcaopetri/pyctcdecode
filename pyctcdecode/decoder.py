@@ -222,7 +222,7 @@ class BeamSearchDecoderCTC:
         self._idx2vocab = {n: c for n, c in enumerate(self._alphabet.labels)}
         self._is_bpe = alphabet.is_bpe
         self._model_key = os.urandom(16)
-        BeamSearchDecoderCTC.model_container[self._model_key] = language_model
+        self.model_container[self._model_key] = language_model
 
     def reset_params(
         self,
@@ -242,6 +242,10 @@ class BeamSearchDecoderCTC:
         if lm_score_boundary is not None:
             language_model.score_boundary = lm_score_boundary  # type: ignore
 
+    @staticmethod
+    def set_model_container(model_container):
+        BeamSearchDecoderCTC.model_container = model_container
+
     @classmethod
     def clear_class_models(cls) -> None:
         """Clear all models from class variable."""
@@ -255,7 +259,7 @@ class BeamSearchDecoderCTC:
     @property
     def _language_model(self) -> Optional[AbstractLanguageModel]:
         """Retrieve the language model."""
-        return BeamSearchDecoderCTC.model_container[self._model_key]
+        return self.model_container[self._model_key]
 
     def _check_logits_dimension(
         self,
@@ -604,6 +608,7 @@ class BeamSearchDecoderCTC:
         prune_history: bool = DEFAULT_PRUNE_BEAMS,
         hotwords: Optional[Iterable[str]] = None,
         hotword_weight: float = DEFAULT_HOTWORD_WEIGHT,
+        validate_pool: bool = True,
     ) -> List[List[OutputBeamMPSafe]]:
         """Use multiprocessing pool to batch decode input logits.
 
@@ -623,7 +628,8 @@ class BeamSearchDecoderCTC:
         Returns:
             List of list of beams of type OUTPUT_BEAM_MP_SAFE with various meta information
         """
-        valid_pool = _get_valid_pool(pool)
+        valid_pool = _get_valid_pool(pool) if validate_pool else pool
+
         if valid_pool is None:
             return [
                 self._decode_beams_mp_safe(
@@ -697,6 +703,7 @@ class BeamSearchDecoderCTC:
         token_min_logp: float = DEFAULT_MIN_TOKEN_LOGP,
         hotwords: Optional[Iterable[str]] = None,
         hotword_weight: float = DEFAULT_HOTWORD_WEIGHT,
+        validate_pool: bool = True,
     ) -> List[str]:
         """Use multiprocessing pool to batch decode input logits.
 
@@ -715,7 +722,8 @@ class BeamSearchDecoderCTC:
         Returns:
             The decoded texts (list of str)
         """
-        valid_pool = _get_valid_pool(pool)
+        valid_pool = _get_valid_pool(pool) if validate_pool else pool
+
         if valid_pool is None:
             return [
                 self.decode(
